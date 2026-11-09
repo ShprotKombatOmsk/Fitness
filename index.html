@@ -1,0 +1,1106 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f2f4f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0f17" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Фитнес">
+<meta name="format-detection" content="telephone=no">
+<title>Фитнес-трекер</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a84ff'/%3E%3Cpath d='M16 33l10 10 22-22' fill='none' stroke='white' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" id="touchIcon" href="">
+
+<style>
+/* ==========================================================
+   СТИЛИ. Цвета — через переменные; тёмная тема по системе.
+   ========================================================== */
+:root{
+  --bg:#f2f4f8; --card:#ffffff; --text:#111827; --muted:#6b7280; --line:#e5e7eb;
+  --accent:#0a84ff; --accent-t:#ffffff; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --skip:#a78bfa;
+  --chip:#eef2f7; --shadow:0 1px 3px rgba(0,0,0,.08);
+  --sat:env(safe-area-inset-top); --sab:env(safe-area-inset-bottom);
+  --sal:env(safe-area-inset-left); --sar:env(safe-area-inset-right);
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#0b0f17; --card:#151b26; --text:#f3f4f6; --muted:#9aa4b2; --line:#263041;
+         --accent:#4aa3ff; --accent-t:#06101d; --chip:#1e2634; --shadow:none; }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+  -webkit-text-size-adjust:100%;overscroll-behavior:none}
+body.lock{overflow:hidden}
+#app{height:100dvh;display:flex;flex-direction:column}
+#main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:calc(var(--sat) + 12px) calc(var(--sar) + 14px) 24px calc(var(--sal) + 14px)}
+h1{font-size:28px;margin:2px 0 10px;letter-spacing:-.5px}
+h2{font-size:18px;margin:18px 0 8px}
+h3{font-size:16px;margin:0 0 6px}
+.muted{color:var(--muted)} .small{font-size:13px} .center{text-align:center}
+.card{background:var(--card);border-radius:18px;padding:14px;margin:0 0 12px;box-shadow:var(--shadow)}
+.row{display:flex;align-items:center;gap:10px} .between{justify-content:space-between}
+.grow{flex:1;min-width:0} .wrap{flex-wrap:wrap}
+.chip{display:inline-block;background:var(--chip);border-radius:999px;padding:3px 10px;font-size:13px;color:var(--muted)}
+.chip.ok{background:rgba(34,197,94,.15);color:var(--ok)} .chip.warn{background:rgba(245,158,11,.18);color:var(--warn)}
+.chip.bad{background:rgba(239,68,68,.15);color:var(--bad)}
+/* кнопки — крупные, под палец */
+.btn{display:block;width:100%;min-height:50px;border:0;border-radius:14px;background:var(--chip);color:var(--text);
+  font:600 16px/1 inherit;font-family:inherit;padding:0 16px;margin:8px 0 0;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-t)}
+.btn.danger{background:rgba(239,68,68,.15);color:var(--bad)}
+.btn.sm{min-height:42px;font-size:14px;margin:0}
+.btn:active{opacity:.7}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.btns .btn{margin:0}
+/* формы */
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--bg);
+  color:var(--text);font:16px inherit;font-family:inherit;padding:0 12px}
+textarea{padding:10px 12px;min-height:70px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.err{color:var(--bad);font-size:14px;margin-top:8px;min-height:0}
+.err:empty{display:none}
+/* навигация */
+#nav{display:flex;background:var(--card);border-top:1px solid var(--line);
+  padding:6px calc(var(--sar) + 4px) calc(var(--sab) + 6px) calc(var(--sal) + 4px)}
+#nav button{flex:1;border:0;background:none;color:var(--muted);font:11px inherit;font-family:inherit;
+  display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;min-height:52px}
+#nav button i{font-style:normal;font-size:22px;line-height:1}
+#nav button.on{color:var(--accent);font-weight:600}
+/* таймер отдыха */
+#timer{background:var(--accent);color:var(--accent-t);display:flex;align-items:center;gap:10px;padding:8px 14px;
+  margin:0 calc(var(--sal) + 10px) 6px calc(var(--sar) + 10px);border-radius:16px}
+#timer[hidden]{display:none}
+#timer b{font-size:24px;font-variant-numeric:tabular-nums;min-width:68px}
+#timer button{border:0;border-radius:10px;background:rgba(255,255,255,.25);color:inherit;font:600 14px inherit;font-family:inherit;min-height:40px;padding:0 12px}
+/* подходы */
+.set{display:grid;grid-template-columns:30px 1fr 84px 112px;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.set:first-of-type{border-top:0}
+.set .sn{width:28px;height:28px;border-radius:50%;background:var(--chip);display:grid;place-items:center;font-size:13px;font-weight:700}
+.set input{min-height:46px;text-align:center;font-size:18px;font-weight:600;padding:0 4px}
+.set .chk{min-height:46px;margin:0;font-size:14px;padding:0 6px}
+.set.done .sn{background:var(--ok);color:#fff}
+.set.done .chk{background:var(--ok);color:#fff}
+.bar{height:8px;background:var(--chip);border-radius:6px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:6px}
+/* кольцо */
+.ring{position:relative;width:96px;height:96px;flex:none}
+.ring svg{transform:rotate(-90deg)}
+.ring .rt{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-weight:700;font-size:18px;line-height:1.1}
+/* баннеры */
+.banner{background:var(--card);border-left:4px solid var(--accent);border-radius:12px;padding:10px 12px;margin:0 0 10px;box-shadow:var(--shadow)}
+.banner.warn{border-color:var(--warn)} .banner.bad{border-color:var(--bad)} .banner.ok{border-color:var(--ok)}
+/* сегмент-переключатель */
+.seg{display:flex;background:var(--chip);border-radius:12px;padding:3px;margin:6px 0 10px}
+.seg button{flex:1;border:0;background:none;color:var(--text);font:600 14px inherit;font-family:inherit;min-height:38px;border-radius:10px}
+.seg button.on{background:var(--card);box-shadow:var(--shadow)}
+/* графики */
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:10px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+.hb{display:grid;grid-template-columns:110px 1fr 28px;gap:8px;align-items:center;margin:6px 0;font-size:14px}
+/* тепловая карта */
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px}
+.heat b{aspect-ratio:1;border-radius:4px;background:var(--chip);display:block}
+.heat b.done{background:var(--ok)} .heat b.partial{background:var(--warn)} .heat b.miss{background:var(--bad)}
+.heat b.skip{background:var(--skip)} .heat b.rest{background:var(--line)} .heat b.today{outline:2px solid var(--accent)}
+.heat b.fut{background:transparent;border:1px dashed var(--line)}
+.lg{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.lg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+/* бейджи */
+.badges{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.badge{background:var(--chip);border-radius:14px;padding:10px;text-align:center;opacity:.45}
+.badge.on{opacity:1;background:rgba(245,158,11,.15)}
+.badge span{font-size:28px;display:block}
+/* список */
+.li{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.li:first-child{border-top:0}
+/* модальное окно */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;z-index:50}
+#modal[hidden]{display:none}
+.sheet{background:var(--card);width:100%;max-height:92dvh;overflow-y:auto;border-radius:22px 22px 0 0;
+  padding:18px calc(var(--sar) + 16px) calc(var(--sab) + 18px) calc(var(--sal) + 16px)}
+.mtext{font-size:16px;margin:0 0 8px;white-space:pre-line}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 84px);z-index:60;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:92%}
+#toast div{background:#111827;color:#fff;padding:10px 14px;border-radius:12px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.3);max-width:100%}
+</style>
+</head>
+<body>
+<noscript>Для работы приложения нужен JavaScript.</noscript>
+<div id="app">
+  <main id="main"></main>
+  <div id="timer" hidden></div>
+  <nav id="nav"></nav>
+</div>
+<div id="modal" hidden></div>
+<div id="toast"></div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<script>
+'use strict';
+/* ==========================================================
+   СОДЕРЖАНИЕ
+   0. Утилиты и даты (Europe/Moscow, неделя с понедельника)
+   1. ★ ФОРМУЛЫ РАСЧЁТА ПЛАНА — меняйте здесь ★
+   2. Хранилище (localStorage)
+   3. Логика: журнал, пересчёт, серии, бейджи, итоги недели
+   4. Интерфейс: модальные окна, вкладки
+   5. Графики (SVG, без внешних библиотек)
+   6. Таймер, уведомления, PWA
+   7. Запуск
+   ========================================================== */
+
+
+/* ==========================================================
+   0. УТИЛИТЫ И ДАТЫ
+   Даты хранятся строками 'ГГГГ-ММ-ДД'. Арифметика идёт в UTC,
+   поэтому не зависит от часового пояса устройства; «сегодня»
+   определяется по часовому поясу TZ.
+   ========================================================== */
+const TZ = 'Europe/Moscow';
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const pad = n => String(n).padStart(2, '0');
+// Строгий разбор числа: пустая строка -> NaN, запятая допускается как разделитель
+const parseNum = v => { const s = String(v ?? '').trim().replace(',', '.'); const n = Number(s); return (s !== '' && isFinite(n)) ? n : NaN; };
+
+const WD = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+const toUTC = iso => { const [y, m, d] = iso.split('-').map(Number); return Date.UTC(y, m - 1, d); };
+const fromUTC = ms => { const d = new Date(ms); return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()); };
+const addDays = (iso, n) => fromUTC(toUTC(iso) + n * 864e5);
+const diffDays = (a, b) => Math.round((toUTC(b) - toUTC(a)) / 864e5);
+const wday = iso => (new Date(toUTC(iso)).getUTCDay() + 6) % 7;      // Пн = 0 ... Вс = 6
+const weekStart = iso => addDays(iso, -wday(iso));                    // понедельник недели
+const today = () => new Intl.DateTimeFormat('sv-SE', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+const nowMinutes = () => { const p = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date()); return (+p.find(x => x.type === 'hour').value % 24) * 60 + +p.find(x => x.type === 'minute').value; };
+const fmtDate = iso => new Date(toUTC(iso)).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'UTC' }).replace('.', '');
+const fmtLong = iso => new Date(toUTC(iso)).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+const plural = (n, a, b, c) => { const m = Math.abs(n) % 100, k = m % 10; return (m > 10 && m < 20) ? c : k === 1 ? a : (k >= 2 && k <= 4) ? b : c; };
+const daysWord = n => n + ' ' + plural(n, 'день', 'дня', 'дней');
+const fmtNum = v => Number.isInteger(v) ? String(v) : v.toFixed(1);
+const bmiOf = (w, h) => w / Math.pow(h / 100, 2);
+const bmiLabel = b => b < 18.5 ? 'дефицит массы' : b < 25 ? 'норма' : b < 30 ? 'избыточная масса' : 'ожирение';
+
+
+/* ==========================================================
+   1. ★ ФОРМУЛЫ РАСЧЁТА ПЛАНА ★
+   Всё, что влияет на нагрузку, собрано в этом блоке.
+
+   Идея. Для каждой цели считаем «рабочее значение» v(i) —
+   сколько повторений (секунд) в ОДНОМ подходе на день i плана:
+     1) v растёт от стартового s до конечного e по кривой
+        c(f) = (1-K)*f + K*smoothstep(f),  f = i/(N-1)
+        (K = curveBlend: 0 — линейно, 1 — S-образно);
+     2) каждые 7 дней (блок) значение ограничено сверху:
+        не больше пика прошлого блока × (1+g) и не меньше +1 к пику;
+        g — предел недельного роста (≤ 15%), зависит от профиля;
+     3) каждая 4-я неделя — разгрузка (×0.8), кроме финальной недели;
+     4) дни отдыха — по числу дней в неделю из профиля.
+   Если после ограничения (п.2) конец плана не достигает e —
+   срок слишком короткий: план небезопасен, предлагаем
+   сдвинуть дату или снизить цель.
+   ========================================================== */
+const PLAN_CFG = {
+  levels: {
+    // sets — подходов в день; intensity — доля от максимума на подход;
+    // growth — базовый предел роста за неделю; maxDays — потолок тренировочных дней; rest — отдых между подходами, с
+    novice: { label: 'Новичок',     sets: 3, intensity: 0.60, growth: 0.10, maxDays: 5, rest: 90 },
+    mid:    { label: 'Средний',     sets: 4, intensity: 0.65, growth: 0.12, maxDays: 6, rest: 75 },
+    adv:    { label: 'Продвинутый', sets: 5, intensity: 0.70, growth: 0.15, maxDays: 7, rest: 60 },
+  },
+  growthMin: 0.05,        // не меньше 5% в неделю
+  growthMax: 0.15,        // не больше 15% в неделю (жёсткий потолок)
+  minAbsStep: 1,          // минимальный прирост за неделю (повторений), чтобы малые числа росли
+  deloadEvery: 4,         // каждая 4-я неделя — разгрузка
+  deloadFactor: 0.8,      // разгрузка = -20%
+  curveBlend: 0.35,       // 0 = линейный рост, 1 = S-образный
+  testFractions: [0.5, 0.7], // разминочные подходы перед контрольным в день цели
+  restExtra: 15,          // +секунд отдыха для планки и берпи
+};
+
+// ИМТ-, возраст- и пол-поправки к недельному росту. Меняйте числа под себя.
+function weeklyGrowthLimit(p, g) {
+  let x = PLAN_CFG.levels[p.level].growth;
+  const b = bmiOf(p.weight, p.height);
+  if (b >= 35) x -= 0.03; else if (b >= 30) x -= 0.02; else if (b < 17) x -= 0.02;
+  if (p.age >= 60) x -= 0.03; else if (p.age >= 50) x -= 0.02; else if (p.age >= 40) x -= 0.01;
+  if (p.sex === 'f' && ['Спина и бицепс', 'Грудь и трицепс', 'Всё тело'].includes(g.group)) x -= 0.01;
+  return clamp(x, PLAN_CFG.growthMin, PLAN_CFG.growthMax);
+}
+
+// Сколько дней в неделю реально тренируем (больше дней отдыха для рискованных профилей)
+function effectiveDays(p) {
+  let d = Math.min(p.days, PLAN_CFG.levels[p.level].maxDays);
+  const b = bmiOf(p.weight, p.height);
+  if (b >= 30 && p.age >= 50) d = Math.min(d, 4);
+  else if (b >= 30 || p.age >= 55) d = Math.min(d, 5);
+  return Math.max(3, d);
+}
+// Дни недели (Пн=0) для тренировок
+const WEEK_PATTERNS = { 3: [0, 2, 4], 4: [0, 1, 3, 5], 5: [0, 1, 3, 4, 5], 6: [0, 1, 2, 3, 4, 5], 7: [0, 1, 2, 3, 4, 5, 6] };
+
+const stepOf = g => g.unit === 'sec' ? 5 : 1;                                   // шаг округления
+const roundStep = (v, st) => Math.max(st, Math.round(v / st) * st);
+// Стартовое значение на подход из тестового максимума
+function startFromTest(g, p) { return roundStep(g.m0 * PLAN_CFG.levels[p.level].intensity, stepOf(g)); }
+
+// Параметры плана: s — старт, e — конец (на подход), n — подходов, gr — предел роста
+function planParams(g, p) {
+  const L = PLAN_CFG.levels[p.level], st = stepOf(g), n = L.sets;
+  const s = Math.max(g.startR, st);
+  let e = g.mode === 'day' ? Math.ceil(g.target / n / st) * st             // цель «за день»: делим на подходы
+                           : roundStep(g.target * L.intensity, st);        // цель «за подход»: рабочий вес = доля от цели
+  e = Math.max(e, s);
+  const rest = L.rest + ((g.unit === 'sec' || g.exId === 'burpee') ? PLAN_CFG.restExtra : 0);
+  return { s, e, n, st, gr: weeklyGrowthLimit(p, g), rest, L };
+}
+
+// Построение плана. Возвращает { days:[{date,rest,deload,test,v,sets:[...],restSec}], ok, vals, N }
+function buildPlan(g, p) {
+  const P = planParams(g, p), from = g.planFrom, N = diffDays(from, g.deadline) + 1;
+  if (N < 1) return { days: [], ok: true, vals: [], N: 0, P };
+  const run = blend => {
+    const raw = i => { const f = N > 1 ? i / (N - 1) : 1; const sm = f * f * (3 - 2 * f); return P.s + (P.e - P.s) * ((1 - blend) * f + blend * sm); };
+    const vals = []; let prevPeak = P.s;
+    for (let k = 0; k * 7 < N; k++) {
+      const cap = Math.max(prevPeak * (1 + P.gr), prevPeak + PLAN_CFG.minAbsStep);   // ограничение недельного роста
+      let peak = 0;
+      for (let i = k * 7; i < Math.min(N, k * 7 + 7); i++) { vals[i] = Math.min(raw(i), cap); peak = Math.max(peak, vals[i]); }
+      prevPeak = Math.max(prevPeak, peak);
+    }
+    return { vals, ok: vals[N - 1] >= P.e - 0.5 };
+  };
+  let r = run(PLAN_CFG.curveBlend);
+  if (!r.ok) r = run(0);                       // S-кривая не успела — пробуем линейную
+  const pattern = WEEK_PATTERNS[effectiveDays(p)];
+  const days = [];
+  for (let i = 0; i < N; i++) {
+    const date = addDays(from, i), k = Math.floor(i / 7), last = i === N - 1;
+    const training = pattern.includes(wday(date)) || last;      // в день цели тренируемся всегда
+    const deload = ((k + 1) % PLAN_CFG.deloadEvery === 0) && ((k + 1) * 7 <= N - 7);
+    const v = r.vals[i];
+    const reps = roundStep(v * (deload ? PLAN_CFG.deloadFactor : 1), P.st);
+    const test = last && r.ok;
+    let sets = training ? Array(P.n).fill(reps) : [];
+    if (test && g.mode === 'set') sets = [...PLAN_CFG.testFractions.map(x => roundStep(g.target * x, P.st)), g.target];   // контрольный подход
+    if (test && g.mode === 'day') sets = Array(P.n).fill(P.e);
+    days.push({ date, rest: !training, deload: training && deload, test: training && test, v, sets, restSec: P.rest });
+  }
+  return { days, ok: r.ok, vals: r.vals, N, P };
+}
+
+// Безопасные альтернативы, если срок слишком короткий
+function alternatives(g, p) {
+  const out = { date: null, target: null };
+  for (let w = 1; w <= 104; w++) {                            // сдвигаем дату по неделям
+    const c = Object.assign({}, g, { deadline: addDays(g.deadline, 7 * w) });
+    if (buildPlan(c, p).ok) { out.date = c.deadline; break; }
+  }
+  const st = stepOf(g); let lo = g.m0 + st, hi = g.target - st, best = null;   // двоичный поиск цели
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2 / st) * st || lo;
+    if (buildPlan(Object.assign({}, g, { target: mid }), p).ok) { best = mid; lo = mid + st; } else hi = mid - st;
+  }
+  if (best && best > g.m0) out.target = best;
+  return out;
+}
+// Бейджи (достижения)
+const BADGES = [
+  { id: 'first', i: '🌱', t: 'Первый шаг', d: 'Первая выполненная тренировка' },
+  { id: 'week1', i: '📅', t: 'Первая неделя', d: '3+ дня тренировок за первые 7 дней' },
+  { id: 's7',    i: '🔥', t: '7 дней подряд', d: 'Серия из 7 дней' },
+  { id: 's30',   i: '🏅', t: '30 дней подряд', d: 'Серия из 30 дней' },
+  { id: 'pr',    i: '⚡', t: 'Личный рекорд', d: 'Больше, чем когда-либо за подход' },
+  { id: 'goal',  i: '🏆', t: 'Цель достигнута', d: 'Контрольный тест пройден' },
+];
+const EXERCISES = [
+  { id: 'pushup', name: 'Отжимания', unit: 'reps', group: 'Грудь и трицепс' },
+  { id: 'squat',  name: 'Приседания', unit: 'reps', group: 'Ноги' },
+  { id: 'crunch', name: 'Пресс (скручивания)', unit: 'reps', group: 'Кор' },
+  { id: 'plank',  name: 'Планка', unit: 'sec', group: 'Кор' },
+  { id: 'pullup', name: 'Подтягивания', unit: 'reps', group: 'Спина и бицепс' },
+  { id: 'lunge',  name: 'Выпады', unit: 'reps', group: 'Ноги' },
+  { id: 'burpee', name: 'Берпи', unit: 'reps', group: 'Всё тело' },
+];
+const GROUPS = ['Грудь и трицепс', 'Ноги', 'Кор', 'Спина и бицепс', 'Плечи', 'Всё тело', 'Другое'];
+const TIPS = [
+  'Хорошо выспитесь: рост мышц идёт во сне. Цель — 7–9 часов.',
+  'Лёгкая прогулка 20–30 минут ускоряет восстановление лучше, чем лежание.',
+  'Выпейте воды и не пропускайте белок в рационе.',
+  'Сделайте мягкую растяжку 5–10 минут, без боли.',
+  'Если что-то болит (не «приятная усталость», а боль) — снизьте нагрузку и обратитесь к врачу.',
+  'Отдых — часть плана, а не лень. Завтра будет легче.',
+  'Подвигайте суставами: круги плечами, тазом, голеностопом.',
+];
+const unitS = g => g.unit === 'sec' ? 'с' : 'повт.';
+
+
+/* ==========================================================
+   2. ХРАНИЛИЩЕ
+   ========================================================== */
+const KEY = 'fit.tracker.v1';
+let memOnly = false;
+const DEFAULT = () => ({ v: 1, profile: null, goals: [], measures: [], records: {}, badges: {},
+  settings: { remindOn: false, remindTime: '20:00', sound: true, ack: false, weekSeen: '', lastNotified: '' } });
+function normalize(o) {
+  const d = DEFAULT(), r = Object.assign(d, o || {});
+  r.settings = Object.assign(DEFAULT().settings, (o && o.settings) || {});
+  if (!Array.isArray(r.goals)) r.goals = [];
+  if (!Array.isArray(r.measures)) r.measures = [];
+  r.records = r.records || {}; r.badges = r.badges || {};
+  r.goals.forEach(g => { g.log = g.log || {}; g.carry = g.carry || {}; g.replans = g.replans || []; });
+  return r;
+}
+function load() { try { const raw = localStorage.getItem(KEY); return raw ? normalize(JSON.parse(raw)) : DEFAULT(); } catch (e) { memOnly = true; return DEFAULT(); } }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { memOnly = true; } }
+let db = load();
+const state = { tab: 'today', period: 'month' };
+
+
+/* ==========================================================
+   3. ЛОГИКА
+   ========================================================== */
+const planCache = new Map();
+function planOf(g) {
+  if (!db.profile) return { days: [], ok: true, vals: [], N: 0 };
+  const key = [g.id, g.mode, g.m0, g.target, g.deadline, g.planFrom, g.startR, JSON.stringify(db.profile)].join('|');
+  if (!planCache.has(key)) { if (planCache.size > 80) planCache.clear(); planCache.set(key, buildPlan(g, db.profile)); }
+  return planCache.get(key);
+}
+const planMap = g => { const m = {}; planOf(g).days.forEach(d => m[d.date] = d); return m; };
+const activeGoals = () => db.goals.filter(g => g.status === 'active');
+const entryFromPlan = p => ({ rest: p.rest, test: !!p.test, deload: !!p.deload, restSec: p.restSec, sets: p.sets.map(r => ({ p: r, a: null, d: false })) });
+
+// Запись дня: из журнала, из «переноса» или из плана
+function getEntry(g, date) {
+  if (g.log[date]) return g.log[date];
+  let e = null;
+  if (g.carry[date]) e = entryFromPlan({ rest: false, sets: g.carry[date].sets, restSec: g.carry[date].restSec });
+  else { const p = planMap(g)[date]; if (p) e = entryFromPlan(p); }
+  if (e) g.log[date] = e;
+  return e;
+}
+function entryStatus(e, date, t) {
+  if (!e) return null;
+  if (e.rest) return 'rest';
+  if (e.skip) return 'skip';
+  const done = e.sets.filter(s => s.d).length;
+  if (done > 0 && done === e.sets.length) return 'done';
+  if (done > 0) return 'partial';
+  return date < t ? 'miss' : 'todo';
+}
+// Общий статус дня по всем целям (для тепловой карты и серии)
+function dayStatus(date) {
+  const t = today();
+  const st = db.goals.map(g => entryStatus(g.log[date], date, t)).filter(Boolean);
+  if (!st.length) return null;
+  const tr = st.filter(s => s !== 'rest');
+  if (!tr.length) return 'rest';
+  if (tr.every(s => s === 'done')) return 'done';
+  if (tr.some(s => s === 'done' || s === 'partial')) return 'partial';
+  if (tr.every(s => s === 'skip')) return 'skip';
+  return date < t ? 'miss' : 'todo';
+}
+function streak() {
+  const t = today(); let d = t, n = 0;
+  const s0 = dayStatus(t);
+  if (s0 !== 'done' && s0 !== 'rest') d = addDays(t, -1);
+  for (let i = 0; i < 3650; i++, d = addDays(d, -1)) {
+    const s = dayStatus(d);
+    if (s === 'done') n++; else if (s === 'rest') continue; else break;
+  }
+  return n;
+}
+// Достигнутый уровень (среднее по выполненным подходам последней тренировки)
+function achievedLevel(g) {
+  const ds = Object.keys(g.log).sort().reverse();
+  for (const d of ds) {
+    const e = g.log[d]; if (e.rest || e.skip) continue;
+    const done = e.sets.filter(s => s.d); if (!done.length) continue;
+    return Math.max(stepOf(g), Math.round(done.reduce((a, s) => a + s.a, 0) / done.length / stepOf(g)) * stepOf(g));
+  }
+  return null;
+}
+function levelNow(g) { const p = planMap(g)[today()]; return p ? p.v : g.startR; }
+
+// Снимок прошедших дней + автоматический пересчёт при пропусках
+function maintainGoal(g) {
+  if (g.status !== 'active' || !db.profile) return;
+  const t = today(), last = addDays(t, -1) < g.deadline ? addDays(t, -1) : g.deadline;
+  let d = g.snapTo && g.snapTo >= g.planFrom ? addDays(g.snapTo, 1) : g.planFrom;
+  for (; d <= last; d = addDays(d, 1)) getEntry(g, d);
+  if (!g.snapTo || last > g.snapTo) g.snapTo = last;
+  if (t > g.deadline) return;
+  // пропуски с момента последнего (пере)расчёта
+  const missed = [];
+  for (let x = g.planFrom; x < t; x = addDays(x, 1)) {
+    const e = g.log[x]; if (!e) continue;
+    const s = entryStatus(e, x, t);
+    if ((s === 'miss' || s === 'partial' || s === 'skip') && !e.post) missed.push(x);
+  }
+  if (missed.length) replanGoal(g, 'пропуски/недовыполнение');
+}
+function replanGoal(g, reason) {
+  const t = today();
+  let lvl = achievedLevel(g) ?? g.startR;
+  // 3 последних тренировки подряд без выполнения -> немного мягче
+  const tr = Object.keys(g.log).sort().filter(x => x < t && !g.log[x].rest).slice(-3);
+  if (tr.length === 3 && tr.every(x => ['miss', 'skip'].includes(entryStatus(g.log[x], x, t)))) lvl *= 0.9;
+  g.startR = roundStep(lvl, stepOf(g));
+  g.planFrom = t; g.snapTo = addDays(t, -1);
+  if (g.log[t] && !g.log[t].sets.some(s => s.d)) delete g.log[t];
+  g.replans.push({ date: t, reason, level: g.startR });
+  g._replanned = true;
+  planCache.clear();
+}
+function raiseSuggestion(g) {
+  if (g.raiseSeen === today() || g.status !== 'active') return null;
+  const ds = Object.keys(g.log).sort().filter(d => d < today() && !g.log[d].rest);
+  const last3 = ds.slice(-3);
+  if (last3.length < 3) return null;
+  let ratio = 0, lvl = 0;
+  for (const d of last3) {
+    const e = g.log[d]; if (e.skip || e.sets.some(s => !s.d)) return null;
+    ratio += e.sets.reduce((a, s) => a + s.a, 0) / e.sets.reduce((a, s) => a + s.p, 0);
+    lvl += e.sets.reduce((a, s) => a + s.a, 0) / e.sets.length;
+  }
+  ratio /= 3; lvl /= 3;
+  if (ratio < 1.12) return null;
+  const c = Object.assign({}, g, { startR: roundStep(lvl, stepOf(g)), planFrom: today() });
+  if (!buildPlan(c, db.profile).ok) return null;
+  return roundStep(lvl, stepOf(g));
+}
+
+function ensureToday() { activeGoals().forEach(g => { if (today() <= g.deadline) getEntry(g, today()); }); }
+function refresh() { activeGoals().forEach(maintainGoal); ensureToday(); checkBadges(true); save(); }
+
+// Рекорды и бейджи
+function unlock(id) { if (db.badges[id]) return; db.badges[id] = today(); const b = BADGES.find(x => x.id === id); toast(b.i + ' Достижение: ' + b.t); }
+function checkBadges(quiet) {
+  const t = today(); let first = null, doneDays = [];
+  const all = new Set(); db.goals.forEach(g => Object.keys(g.log).forEach(d => all.add(d)));
+  [...all].sort().forEach(d => { if (dayStatus(d) === 'done') { doneDays.push(d); if (!first) first = d; } });
+  if (first) unlock('first');
+  if (first && t >= addDays(first, 6) && doneDays.filter(d => d <= addDays(first, 6)).length >= 3) unlock('week1');
+  const s = streak(); if (s >= 7) unlock('s7'); if (s >= 30) unlock('s30');
+}
+function checkGoalDone(g, e) {
+  if (!e.test || g.status !== 'active') return;
+  const ok = g.mode === 'set' ? e.sets.some(s => s.d && s.a >= g.target) : (e.sets.every(s => s.d) && e.sets.reduce((a, s) => a + s.a, 0) >= g.target);
+  if (ok) { g.status = 'done'; g.doneDate = today(); unlock('goal'); toast('🏆 Цель достигнута! Поздравляем!'); }
+}
+
+// Итоги недели (ws — понедельник)
+function weekStats(ws) {
+  const t = today(), end = addDays(ws, 6); let ratios = [], sets = 0, setsDone = 0, tdays = 0, ddays = 0;
+  db.goals.forEach(g => { for (let d = ws; d <= end && d <= t; d = addDays(d, 1)) {
+    const e = g.log[d]; if (!e || e.rest || (d === t && !e.sets.some(s => s.d) && !e.skip)) continue;
+    const p = e.sets.reduce((a, s) => a + s.p, 0), f = e.sets.reduce((a, s) => a + (s.d ? s.a : 0), 0);
+    ratios.push(p ? Math.min(1.5, f / p) : 0); sets += e.sets.length; setsDone += e.sets.filter(s => s.d).length;
+  } });
+  for (let d = ws; d <= end && d <= t; d = addDays(d, 1)) { const s = dayStatus(d); if (s && s !== 'rest' && !(d === t && s === 'todo')) { tdays++; if (s === 'done') ddays++; } }
+  const pct = ratios.length ? Math.round(ratios.reduce((a, b) => a + b, 0) / ratios.length * 100) : null;
+  const inW = db.measures.filter(m => m.date >= ws && m.date <= end && m.weight).sort((a, b) => a.date < b.date ? -1 : 1);
+  const before = db.measures.filter(m => m.date < ws && m.weight).sort((a, b) => a.date < b.date ? 1 : -1)[0];
+  let dw = null;
+  if (inW.length) { const ref = before ? before.weight : inW[0].weight; dw = Math.round((inW[inW.length - 1].weight - ref) * 10) / 10; }
+  let verdict = 'Данных за неделю пока нет.', rec = 'Начните с первой тренировки по плану.';
+  if (pct !== null) {
+    if (pct >= 105) { verdict = 'Отличная неделя: вы выполнили план с запасом.'; rec = 'Можно слегка усложнить план — загляните в «Сегодня», приложение предложит.'; }
+    else if (pct >= 90) { verdict = 'Хорошая неделя: план выполнен.'; rec = 'Держите темп, не форсируйте — стабильность важнее.'; }
+    else if (pct >= 70) { verdict = 'План выполнен частично.'; rec = 'Выделите фиксированное время для тренировки и следите за сном.'; }
+    else { verdict = 'Много пропусков и недовыполнения.'; rec = 'План уже подстраивается под ваш уровень. Лучше меньше, но каждый день по плану.'; }
+  }
+  return { ws, end, pct, sets, setsDone, tdays, ddays, dw, verdict, rec };
+}
+
+
+/* ==========================================================
+   4. ИНТЕРФЕЙС
+   ========================================================== */
+const mainEl = $('#main');
+function toast(msg) { const d = document.createElement('div'); d.textContent = msg; $('#toast').appendChild(d); setTimeout(() => d.remove(), 3500); }
+let confirmResolve = null;
+function openModal(html) { $('#modal').innerHTML = '<div class="sheet" role="dialog">' + html + '</div>'; $('#modal').hidden = false; document.body.classList.add('lock'); }
+function closeModal() { $('#modal').hidden = true; $('#modal').innerHTML = ''; document.body.classList.remove('lock'); const r = confirmResolve; confirmResolve = null; if (r) r(-1); }
+// Диалог с кнопками: возвращает индекс нажатой кнопки или -1
+function confirmBox(text, buttons) {
+  return new Promise(res => {
+    openModal('<p class="mtext">' + text + '</p>' + buttons.map((b, i) => '<button class="btn ' + (b.cls || '') + '" data-act="cb" data-i="' + i + '">' + b.t + '</button>').join('') + '<button class="btn" data-act="cb" data-i="-1">Отмена</button>');
+    confirmResolve = i => { confirmResolve = null; $('#modal').hidden = true; $('#modal').innerHTML = ''; document.body.classList.remove('lock'); res(i); };
+  });
+}
+
+const TABS = [['today', '🔥', 'Сегодня'], ['goals', '🎯', 'Цели'], ['body', '⚖️', 'Замеры'], ['stats', '📈', 'Прогресс'], ['more', '⚙️', 'Ещё']];
+function render() {
+  const sc = mainEl.scrollTop;
+  $('#nav').innerHTML = TABS.map(t => '<button data-act="tab" data-v="' + t[0] + '" class="' + (state.tab === t[0] ? 'on' : '') + '"><i>' + t[1] + '</i>' + t[2] + '</button>').join('');
+  mainEl.innerHTML = ({ today: viewToday, goals: viewGoals, body: viewBody, stats: viewStats, more: viewMore })[state.tab]();
+  mainEl.scrollTop = sc;
+  renderTimer();
+}
+const periodFrom = () => state.period === 'week' ? addDays(today(), -6) : state.period === 'month' ? addDays(today(), -29) : '0000-00-00';
+const segPeriod = () => '<div class="seg">' + [['week', 'Неделя'], ['month', 'Месяц'], ['all', 'Весь срок']].map(x => '<button data-act="period" data-v="' + x[0] + '" class="' + (state.period === x[0] ? 'on' : '') + '">' + x[1] + '</button>').join('') + '</div>';
+
+/* ---------- Вкладка «Сегодня» ---------- */
+function pendingToday() { return activeGoals().some(g => { const e = g.log[today()]; return e && !e.rest && !e.skip && e.sets.some(s => !s.d); }); }
+function viewToday() {
+  const t = today();
+  if (!db.profile) return '<h1>Сегодня</h1><div class="card"><h3>Сначала профиль</h3><p class="muted">Для расчёта плана нужны ваши данные: рост, вес, возраст, уровень.</p><button class="btn primary" data-act="tab" data-v="more">Заполнить профиль</button></div>';
+  const goals = activeGoals();
+  let h = '', banners = '';
+  // баннеры
+  const lastW = db.measures.filter(m => m.weight).sort((a, b) => a.date < b.date ? 1 : -1)[0];
+  if (!lastW || diffDays(lastW.date, t) >= 7) banners += '<div class="banner warn"><b>Пора внести вес</b><div class="small muted">Взвешивайтесь раз в неделю в одно время.</div><button class="btn sm" style="margin-top:8px" data-act="measureNew">Внести замер</button></div>';
+  const ws = weekStart(t);
+  if (db.settings.weekSeen !== ws && db.goals.some(g => Object.keys(g.log).some(d => d < ws))) banners += '<div class="banner ok"><b>Итоги прошлой недели готовы</b><button class="btn sm" style="margin-top:8px" data-act="weekOpen">Открыть</button></div>';
+  if (db.settings.remindOn && nowMinutes() >= toMin(db.settings.remindTime) && pendingToday()) banners += '<div class="banner"><b>⏰ Напоминание</b><div class="small muted">Сегодня ещё есть невыполненные подходы.</div></div>';
+  goals.forEach(g => {
+    if (g._replanned) banners += '<div class="banner warn"><b>План пересчитан: ' + esc(g.name) + '</b><div class="small muted">Нагрузка скорректирована под ваш текущий уровень на оставшийся срок.</div></div>';
+    if (!planOf(g).ok) banners += '<div class="banner bad"><b>Срок поджимает: ' + esc(g.name) + '</b><div class="small muted">Безопасный темп не позволяет достичь цели вовремя.</div><button class="btn sm" style="margin-top:8px" data-act="goalAlt" data-g="' + g.id + '">Что делать</button></div>';
+    const r = raiseSuggestion(g);
+    if (r) banners += '<div class="banner ok"><b>Вы выполняете с запасом: ' + esc(g.name) + '</b><div class="small muted">Предлагаем поднять план до ' + r + ' ' + unitS(g) + ' на подход.</div><div class="btns"><button class="btn sm primary" data-act="raiseYes" data-g="' + g.id + '">Поднять</button><button class="btn sm" data-act="raiseNo" data-g="' + g.id + '">Не сейчас</button></div></div>';
+    if (g.status === 'active' && t > g.deadline) banners += '<div class="banner bad"><b>Срок цели «' + esc(g.name) + '» истёк</b><button class="btn sm" style="margin-top:8px" data-act="tab" data-v="goals">К целям</button></div>';
+  });
+  // кольцо и серия
+  let total = 0, done = 0;
+  goals.forEach(g => { const e = g.log[t]; if (e && !e.rest && !e.skip) { total += e.sets.length; done += e.sets.filter(s => s.d).length; } });
+  const pct = total ? done / total : 0, C = 2 * Math.PI * 40, st = streak();
+  h += '<div class="row between"><div><div class="muted small">' + esc(fmtLong(t)) + '</div><h1>Сегодня</h1></div></div>';
+  h += banners;
+  h += '<div class="card row"><div class="ring"><svg width="96" height="96"><circle cx="48" cy="48" r="40" fill="none" stroke="var(--chip)" stroke-width="10"/><circle cx="48" cy="48" r="40" fill="none" stroke="' + (pct >= 1 ? 'var(--ok)' : 'var(--accent)') + '" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - pct)).toFixed(1) + '"/></svg><div class="rt"><div>' + (total ? done + '/' + total : '—') + '<div class="small muted" style="font-weight:400">подходов</div></div></div></div>' +
+       '<div class="grow"><div style="font-size:30px;font-weight:800">🔥 ' + st + '</div><div class="muted small">' + plural(st, 'день', 'дня', 'дней') + ' подряд</div><div class="small" style="margin-top:6px">' + (total ? (pct >= 1 ? 'Норма дня выполнена! 💪' : 'Осталось ' + (total - done) + ' ' + plural(total - done, 'подход', 'подхода', 'подходов')) : 'Сегодня без тренировок') + '</div></div></div>';
+  if (!goals.length) return h + '<div class="card"><h3>Нет активных целей</h3><p class="muted">Создайте цель — приложение рассчитает план нагрузки до нужной даты.</p><button class="btn primary" data-act="goalNew">Создать цель</button></div>';
+  const entries = goals.map(g => ({ g, e: g.log[t] })).filter(x => x.e);
+  const allRest = entries.length && entries.every(x => x.e.rest);
+  if (allRest) h += '<div class="card"><h3>😌 Сегодня день отдыха</h3><p>' + esc(TIPS[(toUTC(t) / 864e5 | 0) % TIPS.length]) + '</p><p class="muted small">Ближайшая тренировка: ' + esc(nextTrainingText(goals)) + '</p></div>';
+  entries.forEach(({ g, e }) => {
+    const left = diffDays(t, g.deadline);
+    h += '<div class="card"><div class="row between"><h3>' + esc(g.name) + '</h3><span class="chip">до цели ' + daysWord(left) + '</span></div>';
+    if (e.rest) h += '<p class="muted small">Для этой цели сегодня отдых.</p>';
+    else if (e.skip) h += '<p class="muted">Пропущено' + (e.post ? ' (перенесено на завтра)' : '') + '.</p><button class="btn sm" data-act="unskip" data-g="' + g.id + '">Вернуть тренировку</button>';
+    else {
+      const sum = e.sets.reduce((a, s) => a + s.p, 0);
+      h += '<div class="small muted" style="margin-bottom:4px">' + e.sets.length + ' × ' + (e.sets.every(s => s.p === e.sets[0].p) ? e.sets[0].p : 'разные') + ' ' + unitS(g) + ' · всего ' + sum + ' ' + unitS(g) + ' · отдых ' + e.restSec + ' с' +
+           (e.deload ? ' · <b>разгрузочная неделя</b>' : '') + (e.test ? ' · <b>контрольный день</b> 🎯' : '') + '</div>';
+      e.sets.forEach((s, i) => {
+        h += '<div class="set ' + (s.d ? 'done' : '') + '"><div class="sn">' + (i + 1) + '</div><div class="small muted">план ' + s.p + '</div>' +
+             '<input type="number" inputmode="numeric" min="0" max="' + (g.unit === 'sec' ? 3600 : 999) + '" id="a_' + g.id + '_' + i + '" value="' + (s.d ? s.a : (s.a ?? s.p)) + '" ' + (s.d ? 'disabled' : '') + ' aria-label="Фактически">' +
+             '<button class="btn chk" data-act="setTog" data-g="' + g.id + '" data-i="' + i + '">' + (s.d ? '✓ Готово' : 'Выполнено') + '</button></div>';
+      });
+      if (!e.sets.some(s => s.d)) h += '<button class="btn sm" style="margin-top:10px" data-act="skipDay" data-g="' + g.id + '">Пропустить / перенести</button>';
+    }
+    h += '</div>';
+  });
+  return h;
+}
+const toMin = hhmm => { const [a, b] = String(hhmm).split(':').map(Number); return (a || 0) * 60 + (b || 0); };
+function nextTrainingText(goals) {
+  const t = today(); let best = null;
+  goals.forEach(g => { const m = planMap(g); for (let i = 1; i <= 14; i++) { const d = addDays(t, i); if (m[d] && !m[d].rest) { if (!best || d < best) best = d; break; } } });
+  return best ? WD[wday(best)] + ', ' + fmtDate(best) : 'по плану скоро';
+}
+
+/* ---------- Вкладка «Цели» ---------- */
+function viewGoals() {
+  const t = today();
+  let h = '<h1>Цели</h1>';
+  if (!db.profile) return h + '<div class="card"><p class="muted">Сначала заполните профиль во вкладке «Ещё».</p><button class="btn primary" data-act="tab" data-v="more">К профилю</button></div>';
+  const act = db.goals.filter(g => g.status === 'active');
+  act.forEach(g => {
+    const plan = planOf(g), left = diffDays(t, g.deadline), P = plan.P || planParams(g, db.profile);
+    const lvl = levelNow(g), e0 = P.e, prog = e0 > g.s0 ? clamp((lvl - g.s0) / (e0 - g.s0), 0, 1) : 1;
+    h += '<div class="card"><div class="row between"><h3>' + esc(g.name) + '</h3>' + (left < 0 ? '<span class="chip bad">срок истёк</span>' : '<span class="chip">' + daysWord(left) + '</span>') + '</div>' +
+         '<div class="muted small">Тест: ' + g.m0 + ' ' + unitS(g) + ' → цель: ' + g.target + ' ' + unitS(g) + (g.mode === 'day' ? ' за день' : ' за подход') + ' · до ' + fmtDate(g.deadline) + '</div>' +
+         '<div class="bar" style="margin:10px 0 6px"><i style="width:' + Math.round(prog * 100) + '%"></i></div><div class="small muted">Уровень в плане: ' + P.n + ' × ' + Math.round(lvl) + ' ' + unitS(g) + (plan.ok ? '' : ' · <span style="color:var(--bad)">цель недостижима вовремя</span>') + '</div>';
+    const m = planMap(g); let nx = '';
+    for (let i = 0; i < 7; i++) { const d = addDays(t, i), p = m[d]; if (p) nx += '<span class="chip" style="margin:2px 2px 0 0">' + WD[wday(d)] + ' ' + (p.rest ? 'отдых' : p.sets.length + '×' + p.sets[0] + (p.test ? ' 🎯' : '')) + '</span>'; }
+    if (nx) h += '<div style="margin-top:8px">' + nx + '</div>';
+    h += '<div class="btns"><button class="btn sm" data-act="goalEdit" data-g="' + g.id + '">Изменить</button><button class="btn sm" data-act="goalTest" data-g="' + g.id + '">Новый тест</button>' +
+         '<button class="btn sm" data-act="goalReplan" data-g="' + g.id + '">Пересчитать</button><button class="btn sm" data-act="goalFinish" data-g="' + g.id + '">Завершить</button></div>' +
+         (!plan.ok ? '<button class="btn sm" style="margin-top:8px;background:rgba(239,68,68,.15);color:var(--bad)" data-act="goalAlt" data-g="' + g.id + '">Срок слишком короткий — варианты</button>' : '') +
+         '<button class="btn sm danger" style="margin-top:8px" data-act="goalDel" data-g="' + g.id + '">Удалить</button></div>';
+  });
+  if (!act.length) h += '<div class="card"><p class="muted">Активных целей нет.</p></div>';
+  h += '<button class="btn primary" data-act="goalNew">+ Новая цель</button>';
+  const fin = db.goals.filter(g => g.status !== 'active');
+  if (fin.length) {
+    h += '<h2>Завершённые</h2><div class="card">';
+    fin.forEach(g => { h += '<div class="li"><div><b>' + esc(g.name) + '</b><div class="small muted">' + g.target + ' ' + unitS(g) + ' · ' + (g.status === 'done' ? 'достигнута ' + fmtDate(g.doneDate) : 'завершена') + '</div></div><button class="btn sm danger" style="width:auto" data-act="goalDel" data-g="' + g.id + '">Удалить</button></div>'; });
+    h += '</div>';
+  }
+  return h;
+}
+
+/* ---------- Формы: профиль, цель, замер ---------- */
+function profileFormHTML(p) {
+  p = p || {};
+  const bm = p.weight && p.height ? bmiOf(p.weight, p.height) : null;
+  return '<form data-form="profile" novalidate><div class="two"><div><label>Пол</label><select name="sex"><option value="m"' + (p.sex === 'm' ? ' selected' : '') + '>Мужской</option><option value="f"' + (p.sex === 'f' ? ' selected' : '') + '>Женский</option></select></div>' +
+    '<div><label>Возраст (лет)</label><input name="age" type="number" inputmode="numeric" value="' + (p.age ?? '') + '"></div></div>' +
+    '<div class="two"><div><label>Рост (см)</label><input name="height" type="number" inputmode="decimal" value="' + (p.height ?? '') + '"></div><div><label>Вес (кг)</label><input name="weight" type="number" inputmode="decimal" step="0.1" value="' + (p.weight ?? '') + '"></div></div>' +
+    '<label>Уровень подготовки</label><select name="level">' + Object.entries(PLAN_CFG.levels).map(([k, v]) => '<option value="' + k + '"' + (p.level === k ? ' selected' : '') + '>' + v.label + '</option>').join('') + '</select>' +
+    '<label>Дней в неделю готов заниматься (3–7)</label><input name="days" type="number" inputmode="numeric" min="3" max="7" value="' + (p.days ?? 4) + '">' +
+    '<div class="card" style="margin:12px 0 0;background:var(--chip);box-shadow:none"><div class="small muted">ИМТ</div><div id="bmiOut" style="font-size:20px;font-weight:700">' + bmiText(bm) + '</div></div>' +
+    '<div class="err" id="perr"></div><button class="btn primary" type="submit">Сохранить профиль</button></form>';
+}
+const bmiText = b => b && isFinite(b) ? b.toFixed(1) + ' — ' + bmiLabel(b) : '—';
+function submitProfile(f) {
+  const v = n => parseNum(f.elements[n].value), err = $('#perr', f.parentNode) || $('#perr');
+  const age = v('age'), height = v('height'), weight = v('weight'), days = v('days');
+  let m = '';
+  if (!(Number.isInteger(age) && age >= 14 && age <= 90)) m = 'Возраст: целое число от 14 до 90.';
+  else if (!(height >= 100 && height <= 230)) m = 'Рост: от 100 до 230 см.';
+  else if (!(weight >= 30 && weight <= 300)) m = 'Вес: от 30 до 300 кг.';
+  else if (!(Number.isInteger(days) && days >= 3 && days <= 7)) m = 'Дней в неделю: целое число от 3 до 7.';
+  if (m) { err.textContent = m; return; }
+  const np = { sex: f.elements.sex.value, age, height, weight: Math.round(weight * 10) / 10, level: f.elements.level.value, days };
+  const changed = db.profile && JSON.stringify(db.profile) !== JSON.stringify(np);
+  if (changed) activeGoals().forEach(g => { maintainGoal(g); g.startR = roundStep(levelNow(g), stepOf(g)); g.planFrom = today(); g.snapTo = addDays(today(), -1); if (g.log[today()] && !g.log[today()].sets.some(s => s.d)) delete g.log[today()]; });
+  db.profile = np; planCache.clear(); ensureToday(); save();
+  if (!$('#modal').hidden) closeModal();
+  toast('Профиль сохранён' + (changed && activeGoals().length ? ', план пересчитан' : '')); render();
+}
+
+function goalFormHTML(g, d) {
+  const edit = !!g; d = d || {};
+  const exSel = d.exKey || (g ? g.exId : 'pushup');
+  const mode = d.mode || (g ? g.mode : 'set');
+  return '<h2 style="margin-top:0">' + (edit ? 'Изменить цель' : 'Новая цель') + '</h2><form data-form="goal" data-id="' + (g ? g.id : '') + '" novalidate>' +
+    (edit ? '<div class="card" style="background:var(--chip);box-shadow:none"><b>' + esc(g.name) + '</b><div class="small muted">Упражнение и тестовый максимум меняются кнопкой «Новый тест».</div></div>' :
+      '<label>Упражнение</label><select name="ex" id="gx">' + EXERCISES.map(x => '<option value="' + x.id + '"' + (exSel === x.id ? ' selected' : '') + '>' + x.name + ' (' + (x.unit === 'sec' ? 'сек' : 'повт.') + ')</option>').join('') + '<option value="custom"' + (exSel === 'custom' ? ' selected' : '') + '>Своё упражнение…</option></select>' +
+      '<div id="customBox" ' + (exSel === 'custom' ? '' : 'hidden') + '><label>Название</label><input name="cname" maxlength="40" value="' + esc(d.cname || '') + '"><div class="two"><div><label>Единицы</label><select name="cunit"><option value="reps">повторения</option><option value="sec"' + (d.cunit === 'sec' ? ' selected' : '') + '>секунды</option></select></div><div><label>Группа мышц</label><select name="cgroup">' + GROUPS.map(x => '<option' + (d.cgroup === x ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></div></div></div>') +
+    '<label>Тип цели</label><select name="mode"><option value="set"' + (mode === 'set' ? ' selected' : '') + '>Максимум за один подход</option><option value="day"' + (mode === 'day' ? ' selected' : '') + '>Суммарно за день</option></select>' +
+    (edit ? '' : '<label>Тестовый максимум сейчас (сколько делаете за один подход максимум)</label><input name="m0" type="number" inputmode="numeric" value="' + (d.m0 ?? '') + '" placeholder="например, 12">') +
+    '<label>Цель (повторений или секунд)</label><input name="target" type="number" inputmode="numeric" value="' + (d.target ?? (g ? g.target : '')) + '">' +
+    '<label>Дата достижения</label><input name="deadline" type="date" min="' + addDays(today(), 3) + '" max="' + addDays(today(), 730) + '" value="' + (d.deadline ?? (g ? g.deadline : addDays(today(), 56))) + '">' +
+    '<div class="err" id="gerr"></div><button class="btn primary" type="submit">' + (edit ? 'Сохранить' : 'Рассчитать план') + '</button><button class="btn" type="button" data-act="closeModal">Отмена</button></form>';
+}
+// Сбор и проверка данных формы цели. Возвращает {g} или {error}
+function readGoalForm(f, existing) {
+  const v = n => f.elements[n] ? f.elements[n].value : '';
+  let ex, name, unit, group, exId, m0;
+  if (existing) { ({ name, unit, group, exId, m0 } = existing); }
+  else {
+    const key = v('ex');
+    if (key === 'custom') {
+      name = v('cname').trim(); unit = v('cunit'); group = v('cgroup'); exId = 'custom:' + name.toLowerCase();
+      if (name.length < 2 || name.length > 40) return { error: 'Название упражнения: от 2 до 40 символов.' };
+    } else { ex = EXERCISES.find(x => x.id === key); name = ex.name; unit = ex.unit; group = ex.group; exId = ex.id; }
+    m0 = parseNum(v('m0'));
+    const maxV = unit === 'sec' ? 3600 : 500;
+    if (!Number.isInteger(m0) || m0 < 0 || m0 > maxV) return { error: 'Тестовый максимум: целое число от 0 до ' + maxV + '.' };
+  }
+  const target = parseNum(v('target')), mode = v('mode'), deadline = v('deadline'), maxT = unit === 'sec' ? 3600 : 500;
+  if (!Number.isInteger(target) || target < 1 || target > maxT) return { error: 'Цель: целое число от 1 до ' + maxT + '.' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(deadline) || isNaN(toUTC(deadline))) return { error: 'Укажите дату достижения цели.' };
+  if (deadline < addDays(today(), 3)) return { error: 'Дата должна быть не раньше чем через 3 дня.' };
+  if (deadline > addDays(today(), 730)) return { error: 'Дата не должна быть дальше двух лет.' };
+  const st = unit === 'sec' ? 5 : 1;
+  if (unit === 'sec' && target % 5) return { error: 'Для секунд используйте значения, кратные 5.' };
+  if (mode === 'set' && target <= m0) return { error: 'Цель за подход должна быть больше текущего максимума (' + m0 + ').' };
+  const g = existing ? Object.assign({}, existing) : { id: uid(), exId, name, unit, group, m0, status: 'active', created: today(), log: {}, carry: {}, replans: [] };
+  Object.assign(g, { mode, target, deadline });
+  if (!existing) { g.startR = startFromTest(g, db.profile); g.s0 = g.startR; g.planFrom = today(); }
+  if (mode === 'day') {
+    const P = planParams(g, db.profile);
+    if (target <= P.n * g.startR && !existing) return { error: 'Цель за день (' + target + ') не выше нагрузки, с которой вы уже стартуете (' + P.n * g.startR + '). Поставьте цель побольше.' };
+  }
+  return { g };
+}
+function submitGoal(f) {
+  const id = f.dataset.id, existing = id ? db.goals.find(x => x.id === id) : null, err = $('#gerr');
+  if (existing) { maintainGoal(existing); existing.startR = roundStep(levelNow(existing), stepOf(existing)); }
+  const r = readGoalForm(f, existing);
+  if (r.error) { err.textContent = r.error; return; }
+  const draft = { exKey: f.elements.ex ? f.elements.ex.value : '', cname: f.elements.cname ? f.elements.cname.value : '', cunit: f.elements.cunit ? f.elements.cunit.value : '', cgroup: f.elements.cgroup ? f.elements.cgroup.value : '', mode: r.g.mode, m0: r.g.m0, target: r.g.target, deadline: r.g.deadline };
+  commitGoal(r.g, existing, draft);
+}
+async function commitGoal(g, existing, draft) {
+  if (existing) { g.planFrom = today(); }
+  const plan = buildPlan(g, db.profile);
+  if (!plan.ok) {
+    const alt = alternatives(g, db.profile), btns = [];
+    if (alt.date) btns.push({ t: 'Сдвинуть дату на ' + fmtDate(alt.date), cls: 'primary', v: 'date' });
+    if (alt.target) btns.push({ t: 'Снизить цель до ' + alt.target + ' ' + unitS(g), cls: 'primary', v: 'target' });
+    btns.push({ t: 'Вернуться к редактированию', v: 'edit' });
+    const i = await confirmBox('⚠️ Срок слишком короткий для безопасного достижения цели.\n\nС вашим профилем рост нагрузки не должен превышать 10–15% в неделю. Небезопасный план не создаётся. Варианты:', btns);
+    const pick = i < 0 ? 'edit' : btns[i].v;
+    if (pick === 'date') g.deadline = alt.date; else if (pick === 'target') g.target = alt.target;
+    else { openModal(goalFormHTML(existing, draft)); return; }
+  }
+  if (existing) {
+    Object.assign(existing, g); existing.snapTo = addDays(today(), -1);
+    if (existing.log[today()] && !existing.log[today()].sets.some(s => s.d)) delete existing.log[today()];
+    existing.replans.push({ date: today(), reason: 'изменение цели', level: existing.startR });
+  } else {
+    db.goals.push(g);
+    if (!db.records[g.exId] || db.records[g.exId] < g.m0) db.records[g.exId] = g.m0;
+  }
+  planCache.clear(); ensureToday(); save(); closeModal(); toast(existing ? 'Цель обновлена' : 'Цель создана, план рассчитан'); state.tab = existing ? state.tab : 'goals'; render();
+}
+
+function measureFormHTML(m) {
+  m = m || {};
+  const mood = ['😣', '😕', '😐', '🙂', '😄'];
+  return '<h2 style="margin-top:0">' + (m.id ? 'Изменить замер' : 'Новый замер') + '</h2><form data-form="measure" data-id="' + (m.id || '') + '" novalidate>' +
+    '<label>Дата</label><input name="date" type="date" max="' + today() + '" value="' + (m.date || today()) + '">' +
+    '<label>Вес, кг *</label><input name="weight" type="number" inputmode="decimal" step="0.1" value="' + (m.weight ?? db.profile?.weight ?? '') + '">' +
+    '<div class="two"><div><label>Талия, см</label><input name="waist" type="number" inputmode="decimal" value="' + (m.waist ?? '') + '"></div><div><label>Грудь, см</label><input name="chest" type="number" inputmode="decimal" value="' + (m.chest ?? '') + '"></div></div>' +
+    '<div class="two"><div><label>Бёдра, см</label><input name="hips" type="number" inputmode="decimal" value="' + (m.hips ?? '') + '"></div><div><label>% жира</label><input name="fat" type="number" inputmode="decimal" value="' + (m.fat ?? '') + '"></div></div>' +
+    '<label>Самочувствие</label><select name="mood"><option value="">—</option>' + mood.map((e, i) => '<option value="' + (i + 1) + '"' + (m.mood === i + 1 ? ' selected' : '') + '>' + (i + 1) + ' ' + e + '</option>').join('') + '</select>' +
+    '<label>Заметка</label><textarea name="note" maxlength="200">' + esc(m.note || '') + '</textarea>' +
+    '<div class="err" id="merr"></div><button class="btn primary" type="submit">Сохранить</button><button class="btn" type="button" data-act="closeModal">Отмена</button></form>';
+}
+function submitMeasure(f) {
+  const v = n => f.elements[n].value.trim(), err = $('#merr'), id = f.dataset.id;
+  const date = v('date'), weight = parseNum(v('weight'));
+  const opt = (n, a, b, label) => { if (v(n) === '') return { ok: true, val: null }; const x = parseNum(v(n)); return (x >= a && x <= b) ? { ok: true, val: x } : { ok: false, msg: label + ': от ' + a + ' до ' + b + '.' }; };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > today()) { err.textContent = 'Дата: не позже сегодняшней.'; return; }
+  if (!(weight >= 30 && weight <= 300)) { err.textContent = 'Вес: от 30 до 300 кг.'; return; }
+  const parts = { waist: opt('waist', 40, 250, 'Талия'), chest: opt('chest', 50, 250, 'Грудь'), hips: opt('hips', 50, 250, 'Бёдра'), fat: opt('fat', 2, 70, '% жира') };
+  for (const k in parts) if (!parts[k].ok) { err.textContent = parts[k].msg; return; }
+  const rec = { id: id || uid(), date, weight: Math.round(weight * 10) / 10, waist: parts.waist.val, chest: parts.chest.val, hips: parts.hips.val, fat: parts.fat.val, mood: v('mood') ? +v('mood') : null, note: v('note') };
+  if (!id) { const same = db.measures.find(x => x.date === date); if (same) rec.id = same.id; }
+  const i = db.measures.findIndex(x => x.id === rec.id);
+  if (i >= 0) db.measures[i] = rec; else db.measures.push(rec);
+  syncWeight(); save(); closeModal(); toast('Замер сохранён'); render();
+}
+function syncWeight() {
+  const last = db.measures.filter(m => m.weight).sort((a, b) => a.date < b.date ? 1 : -1)[0];
+  if (last && db.profile) { db.profile.weight = last.weight; planCache.clear(); }
+}
+
+/* ---------- Вкладка «Замеры» ---------- */
+function viewBody() {
+  const ms = db.measures.slice().sort((a, b) => a.date < b.date ? 1 : -1), from = periodFrom();
+  const bm = db.profile ? bmiOf(db.profile.weight, db.profile.height) : null;
+  let h = '<h1>Замеры</h1><button class="btn primary" style="margin-top:0" data-act="measureNew">+ Добавить замер</button>';
+  if (bm) h += '<div class="card" style="margin-top:12px"><div class="muted small">Текущий ИМТ</div><div style="font-size:22px;font-weight:700">' + bmiText(bm) + '</div></div>';
+  h += segPeriod();
+  const wp = db.measures.filter(m => m.weight && m.date >= from).sort((a, b) => a.date < b.date ? -1 : 1);
+  const series = [{ name: 'Вес, кг', color: 'var(--accent)', pts: wp.map(m => ({ x: toUTC(m.date), y: m.weight })) }];
+  if (wp.length >= 3) { const tr = trend(series[0].pts); if (tr) series.push({ name: 'Тренд', color: 'var(--warn)', dash: '5 4', pts: tr, nodots: true }); }
+  h += '<div class="card chart"><h3>Вес по времени</h3>' + lineChart(series) + '</div>';
+  if (db.profile) h += '<div class="card chart"><h3>ИМТ по времени</h3>' + lineChart([{ name: 'ИМТ', color: 'var(--ok)', pts: wp.map(m => ({ x: toUTC(m.date), y: Math.round(bmiOf(m.weight, db.profile.height) * 10) / 10 })) }]) + '</div>';
+  h += '<h2>Журнал</h2><div class="card">';
+  if (!ms.length) h += '<p class="muted">Записей пока нет.</p>';
+  ms.forEach(m => {
+    const extra = [m.waist && 'талия ' + m.waist, m.chest && 'грудь ' + m.chest, m.hips && 'бёдра ' + m.hips, m.fat && m.fat + '% жира', m.mood && 'самочувствие ' + m.mood + '/5'].filter(Boolean).join(' · ');
+    h += '<div class="li"><div class="grow"><b>' + fmtDate(m.date) + ' · ' + m.weight + ' кг</b><div class="small muted">' + esc(extra) + '</div>' + (m.note ? '<div class="small">' + esc(m.note) + '</div>' : '') + '</div><div class="row" style="gap:6px"><button class="btn sm" style="width:auto" data-act="measureEdit" data-id="' + m.id + '">✎</button><button class="btn sm danger" style="width:auto" data-act="measureDel" data-id="' + m.id + '">✕</button></div></div>';
+  });
+  return h + '</div>';
+}
+// Линейный тренд (метод наименьших квадратов)
+function trend(pts) {
+  const n = pts.length; if (n < 2) return null;
+  const mx = pts.reduce((a, p) => a + p.x, 0) / n, my = pts.reduce((a, p) => a + p.y, 0) / n;
+  let nu = 0, de = 0; pts.forEach(p => { nu += (p.x - mx) * (p.y - my); de += (p.x - mx) * (p.x - mx); });
+  if (!de) return null; const b = nu / de, a = my - b * mx;
+  const x1 = pts[0].x, x2 = pts[n - 1].x; return [{ x: x1, y: a + b * x1 }, { x: x2, y: a + b * x2 }];
+}
+
+/* ---------- Вкладка «Прогресс» ---------- */
+function viewStats() {
+  const t = today(), ws = weekStart(t);
+  let h = '<h1>Прогресс</h1>';
+  [[ws, 'Эта неделя'], [addDays(ws, -7), 'Прошлая неделя']].forEach(([w, title]) => {
+    const s = weekStats(w);
+    h += '<div class="card"><div class="row between"><h3>' + title + '</h3><span class="chip">' + fmtDate(w) + ' – ' + fmtDate(addDays(w, 6)) + '</span></div>' +
+      (s.pct === null ? '<p class="muted">Нет данных.</p>' : '<div class="row wrap" style="gap:6px;margin-bottom:8px"><span class="chip ok">План: ' + s.pct + '%</span><span class="chip">Подходы: ' + s.setsDone + '/' + s.sets + '</span><span class="chip">Дни: ' + s.ddays + '/' + s.tdays + '</span>' + (s.dw !== null ? '<span class="chip">Вес: ' + (s.dw > 0 ? '+' : '') + s.dw + ' кг</span>' : '') + '</div><div>' + esc(s.verdict) + '</div><div class="small muted" style="margin-top:4px">' + esc(s.rec) + '</div>') + '</div>';
+  });
+  db.settings.weekSeen = ws; save();
+  h += segPeriod();
+  const from = periodFrom();
+  // в) план vs факт по каждой цели
+  db.goals.forEach(g => {
+    const plan = [], fact = [], m = planMap(g), dates = new Set(Object.keys(g.log));
+    if (state.period === 'all') Object.keys(m).forEach(d => dates.add(d));
+    [...dates].filter(d => d >= from).sort().forEach(d => {
+      const e = g.log[d] || (d > t ? m[d] && entryFromPlan(m[d]) : null); if (!e || e.rest) return;
+      const p = e.sets.reduce((a, s) => a + s.p, 0); plan.push({ x: toUTC(d), y: p });
+      if (d <= t && e.sets.some(s => s.d)) fact.push({ x: toUTC(d), y: e.sets.reduce((a, s) => a + (s.d ? s.a : 0), 0) });
+    });
+    if (plan.length) h += '<div class="card chart"><h3>План vs факт: ' + esc(g.name) + '</h3>' + lineChart([{ name: 'План', color: 'var(--muted)', dash: '5 4', pts: plan }, { name: 'Факт', color: 'var(--accent)', pts: fact }], { zero: true }) + '<div class="small muted">Сумма за тренировку, ' + unitS(g) + '</div></div>';
+  });
+  // г) объём по неделям (или по дням для недели)
+  const vol = {}, volS = {};
+  db.goals.forEach(g => Object.keys(g.log).forEach(d => {
+    if (d < from) return; const e = g.log[d]; if (e.rest) return;
+    const sum = e.sets.reduce((a, s) => a + (s.d ? s.a : 0), 0); if (!sum) return;
+    const k = state.period === 'week' ? d : weekStart(d); (g.unit === 'sec' ? volS : vol)[k] = ((g.unit === 'sec' ? volS : vol)[k] || 0) + sum;
+  }));
+  h += '<div class="card chart"><h3>Объём тренировок (повторения)</h3>' + barChart(vol) + '</div>';
+  if (Object.keys(volS).length) { const m2 = {}; Object.keys(volS).forEach(k => m2[k] = Math.round(volS[k] / 6) / 10); h += '<div class="card chart"><h3>Время под нагрузкой (минуты)</h3>' + barChart(m2) + '</div>'; }
+  // д) частота по упражнениям и группам мышц
+  const byEx = {}, byGr = {};
+  db.goals.forEach(g => Object.keys(g.log).forEach(d => { if (d >= from && g.log[d].sets.some(s => s.d)) { byEx[g.name] = (byEx[g.name] || 0) + 1; byGr[g.group] = (byGr[g.group] || 0) + 1; } }));
+  h += '<div class="card"><h3>Частота: упражнения</h3>' + hbars(byEx) + '<h3 style="margin-top:14px">Частота: мышечные группы</h3>' + hbars(byGr) + '<div class="small muted">Количество тренировочных дней за период.</div></div>';
+  // тепловая карта
+  const weeks = 18, start = addDays(weekStart(t), -7 * (weeks - 1)); let cells = '';
+  for (let w = 0; w < weeks; w++) for (let d = 0; d < 7; d++) {
+    const date = addDays(start, w * 7 + d); let cls = '';
+    if (date > t) cls = 'fut'; else { const s = dayStatus(date); cls = s && s !== 'todo' ? s : ''; if (s === 'todo') cls = 'partial'; }
+    cells += '<b class="' + cls + (date === t ? ' today' : '') + '" title="' + date + '"></b>';
+  }
+  h += '<div class="card"><h3>Календарь</h3><div class="heat">' + cells + '</div><div class="lg"><span><i style="background:var(--ok)"></i>выполнено</span><span><i style="background:var(--warn)"></i>частично</span><span><i style="background:var(--bad)"></i>пропуск</span><span><i style="background:var(--skip)"></i>отложено</span><span><i style="background:var(--line)"></i>отдых</span></div><div class="small muted" style="margin-top:6px">Столбцы — недели (последние 18), строки — Пн…Вс.</div></div>';
+  // бейджи
+  h += '<div class="card"><h3>Достижения</h3><div class="badges">' + BADGES.map(b => '<div class="badge ' + (db.badges[b.id] ? 'on' : '') + '"><span>' + b.i + '</span><b>' + b.t + '</b><div class="small muted">' + (db.badges[b.id] ? fmtDate(db.badges[b.id]) : b.d) + '</div></div>').join('') + '</div></div>';
+  return h;
+}
+
+/* ---------- Вкладка «Ещё» ---------- */
+function viewMore() {
+  const s = db.settings;
+  let h = '<h1>Ещё</h1><div class="card"><h3>Профиль</h3>' + profileFormHTML(db.profile) + '</div>';
+  h += '<div class="card"><h3>Напоминания</h3><div class="row between"><span>Ежедневное напоминание</span><input type="checkbox" id="remOn" style="width:28px;min-height:28px" ' + (s.remindOn ? 'checked' : '') + '></div><label>Время (Москва)</label><input type="time" id="remTime" value="' + esc(s.remindTime) + '">' +
+       '<div class="row between" style="margin-top:12px"><span>Звук и вибрация таймера</span><input type="checkbox" id="sndOn" style="width:28px;min-height:28px" ' + (s.sound ? 'checked' : '') + '></div>' +
+       '<p class="small muted">Уведомления на iPhone работают, если приложение добавлено на экран «Домой» (iOS 16.4+) и пока оно запущено. Иначе напоминание появится при открытии приложения.</p></div>';
+  h += '<div class="card"><h3>Данные</h3><div class="btns"><button class="btn sm" data-act="exportJson">Экспорт JSON</button><button class="btn sm" data-act="importJson">Импорт JSON</button></div><button class="btn sm" style="margin-top:8px" data-act="exportCsv">Экспорт замеров (CSV)</button><button class="btn sm danger" style="margin-top:8px" data-act="resetAll">Сбросить все данные</button>' + (memOnly ? '<p class="small" style="color:var(--bad)">⚠️ Хранилище недоступно (приватный режим?). Данные пропадут при закрытии.</p>' : '') + '</div>';
+  h += '<div class="card"><h3>Важно</h3><p class="small muted">Приложение не заменяет консультацию врача. При болях, головокружении, одышке, а также при хронических заболеваниях проконсультируйтесь с врачом перед началом тренировок.</p></div>';
+  return h;
+}
+
+/* ---------- Действия (делегирование событий) ---------- */
+const actions = {
+  tab: d => { state.tab = d.v; render(); mainEl.scrollTop = 0; },
+  period: d => { state.period = d.v; render(); },
+  closeModal: () => closeModal(),
+  cb: d => { if (confirmResolve) confirmResolve(+d.i); else closeModal(); },
+  weekOpen: () => { state.tab = 'stats'; render(); },
+  goalNew: () => { if (!db.profile) { toast('Сначала заполните профиль'); state.tab = 'more'; render(); return; } openModal(goalFormHTML(null)); },
+  goalEdit: d => openModal(goalFormHTML(db.goals.find(g => g.id === d.g))),
+  goalDel: async d => { const g = db.goals.find(x => x.id === d.g); const i = await confirmBox('Удалить цель «' + esc(g.name) + '» вместе с историей?', [{ t: 'Удалить', cls: 'danger' }]); if (i === 0) { db.goals = db.goals.filter(x => x.id !== g.id); save(); render(); } },
+  goalFinish: async d => { const g = db.goals.find(x => x.id === d.g); const i = await confirmBox('Завершить цель «' + esc(g.name) + '»?', [{ t: 'Цель достигнута 🏆', cls: 'primary' }, { t: 'Просто завершить' }]); if (i < 0) return; g.status = i === 0 ? 'done' : 'archived'; g.doneDate = today(); if (i === 0) unlock('goal'); save(); render(); },
+  goalReplan: d => { const g = db.goals.find(x => x.id === d.g); maintainGoal(g); replanGoal(g, 'вручную'); ensureToday(); save(); toast('План пересчитан'); render(); },
+  goalTest: d => { const g = db.goals.find(x => x.id === d.g); openModal('<h2 style="margin-top:0">Новый тест: ' + esc(g.name) + '</h2><form data-form="test" data-id="' + g.id + '" novalidate><label>Максимум за один подход сейчас</label><input name="m0" type="number" inputmode="numeric" value="' + g.m0 + '"><div class="err" id="terr"></div><button class="btn primary" type="submit">Пересчитать план</button><button class="btn" type="button" data-act="closeModal">Отмена</button></form>'); },
+  goalAlt: async d => {
+    const g = db.goals.find(x => x.id === d.g), alt = alternatives(Object.assign({}, g, { planFrom: today(), startR: roundStep(levelNow(g), stepOf(g)) }), db.profile), btns = [];
+    if (alt.date) btns.push({ t: 'Сдвинуть дату на ' + fmtDate(alt.date), cls: 'primary', v: 'date' });
+    if (alt.target) btns.push({ t: 'Снизить цель до ' + alt.target + ' ' + unitS(g), cls: 'primary', v: 'target' });
+    const i = await confirmBox('Безопасный темп не позволяет достичь цели «' + esc(g.name) + '» к ' + fmtDate(g.deadline) + '. Выберите вариант:', btns);
+    if (i < 0) return;
+    const c = Object.assign({}, g); if (btns[i].v === 'date') c.deadline = alt.date; else c.target = alt.target;
+    c.startR = roundStep(levelNow(g), stepOf(g)); Object.assign(g, c); g.planFrom = today(); g.snapTo = addDays(today(), -1);
+    if (g.log[today()] && !g.log[today()].sets.some(s => s.d)) delete g.log[today()];
+    planCache.clear(); ensureToday(); save(); toast('План обновлён'); render();
+  },
+  raiseYes: d => { const g = db.goals.find(x => x.id === d.g), r = raiseSuggestion(g); if (!r) return; g.startR = r; g.planFrom = today(); g.snapTo = addDays(today(), -1); if (g.log[today()] && !g.log[today()].sets.some(s => s.d)) delete g.log[today()]; g.replans.push({ date: today(), reason: 'повышение', level: r }); planCache.clear(); ensureToday(); save(); toast('План поднят 💪'); render(); },
+  raiseNo: d => { db.goals.find(x => x.id === d.g).raiseSeen = today(); save(); render(); },
+  setTog: d => {
+    const g = db.goals.find(x => x.id === d.g), e = g.log[today()], s = e.sets[+d.i];
+    if (s.d) { s.d = false; s.a = null; save(); render(); return; }
+    const v = parseNum($('#a_' + g.id + '_' + d.i).value), mx = g.unit === 'sec' ? 3600 : 999;
+    if (!Number.isInteger(v) || v < 0 || v > mx) { toast('Введите целое число от 0 до ' + mx); return; }
+    s.a = v; s.d = true; unlockAudio();
+    const rec = db.records[g.exId] || 0;
+    if (v > rec) { if (rec > 0) { unlock('pr'); toast('⚡ Новый личный рекорд: ' + v + ' ' + unitS(g)); } db.records[g.exId] = v; }
+    const remain = e.sets.some(x => !x.d);
+    checkGoalDone(g, e); checkBadges();
+    if (remain && g.status === 'active') startTimer(e.restSec); else if (!remain) { stopTimer(); toast('✅ ' + g.name + ': все подходы выполнены'); }
+    save(); render();
+  },
+  skipDay: async d => {
+    const g = db.goals.find(x => x.id === d.g), e = g.log[today()], tm = addDays(today(), 1), can = tm < g.deadline;
+    const btns = [{ t: 'Пропустить (учтётся в статистике)', cls: 'danger' }]; if (can) btns.unshift({ t: 'Перенести на завтра' });
+    const i = await confirmBox('Пропустить сегодняшнюю тренировку «' + esc(g.name) + '»?\nПропуск попадёт в статистику.', btns);
+    if (i < 0) return;
+    e.skip = true;
+    if (can && i === 0) { e.post = true; g.carry[tm] = { sets: e.sets.map(s => s.p), restSec: e.restSec }; delete g.log[tm]; }
+    save(); render();
+  },
+  unskip: d => { const g = db.goals.find(x => x.id === d.g), e = g.log[today()]; delete e.skip; if (e.post) { delete g.carry[addDays(today(), 1)]; delete e.post; } save(); render(); },
+  measureNew: () => openModal(measureFormHTML()),
+  measureEdit: d => openModal(measureFormHTML(db.measures.find(m => m.id === d.id))),
+  measureDel: async d => { const i = await confirmBox('Удалить эту запись?', [{ t: 'Удалить', cls: 'danger' }]); if (i === 0) { db.measures = db.measures.filter(m => m.id !== d.id); syncWeight(); save(); render(); } },
+  timerAdd: () => { if (timer) { timer.end += 15000; timer.total += 15; renderTimer(); } },
+  timerStop: () => stopTimer(),
+  exportJson: () => download('fitness-backup-' + today() + '.json', JSON.stringify(db, null, 1), 'application/json'),
+  importJson: () => $('#importFile').click(),
+  exportCsv: () => {
+    const rows = [['Дата', 'Вес', 'Талия', 'Грудь', 'Бёдра', '% жира', 'Самочувствие', 'Заметка']];
+    db.measures.slice().sort((a, b) => a.date < b.date ? -1 : 1).forEach(m => rows.push([m.date, m.weight, m.waist, m.chest, m.hips, m.fat, m.mood, m.note]));
+    const csv = rows.map(r => r.map(c => { const s = (c ?? '') + ''; const t = typeof c === 'number' ? s.replace('.', ',') : s; return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; }).join(';')).join('\r\n');
+    download('measures-' + today() + '.csv', '\ufeff' + csv, 'text/csv;charset=utf-8');
+  },
+  resetAll: async () => {
+    if (await confirmBox('Удалить ВСЕ данные: профиль, цели, замеры, достижения?', [{ t: 'Продолжить', cls: 'danger' }]) !== 0) return;
+    if (await confirmBox('Точно удалить? Это действие необратимо. Сначала сделайте экспорт, если нужна копия.', [{ t: 'Да, удалить всё', cls: 'danger' }]) !== 0) return;
+    db = DEFAULT(); db.settings.ack = true; planCache.clear(); save(); stopTimer(); toast('Данные сброшены'); state.tab = 'today'; render();
+  },
+};
+function download(name, text, mime) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: mime })); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+document.addEventListener('click', e => {
+  const m = $('#modal'); if (e.target === m) { closeModal(); return; }
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const f = actions[t.dataset.act]; if (f) f(t.dataset, t, e);
+});
+document.addEventListener('submit', e => {
+  e.preventDefault(); const f = e.target, k = f.dataset.form;
+  if (k === 'profile') submitProfile(f);
+  else if (k === 'goal') submitGoal(f);
+  else if (k === 'measure') submitMeasure(f);
+  else if (k === 'test') {
+    const g = db.goals.find(x => x.id === f.dataset.id), m0 = parseNum(f.elements.m0.value), mx = g.unit === 'sec' ? 3600 : 500;
+    if (!Number.isInteger(m0) || m0 < 0 || m0 > mx) { $('#terr').textContent = 'Целое число от 0 до ' + mx + '.'; return; }
+    if (g.mode === 'set' && m0 >= g.target) { $('#terr').textContent = 'Максимум уже не меньше цели (' + g.target + '). Увеличьте цель в «Изменить».'; return; }
+    maintainGoal(g); const old = g.m0; g.m0 = m0; g.startR = startFromTest(g, db.profile); g.planFrom = today(); g.snapTo = addDays(today(), -1);
+    if (g.log[today()] && !g.log[today()].sets.some(s => s.d)) delete g.log[today()];
+    if (m0 > (db.records[g.exId] || 0)) db.records[g.exId] = m0;
+    g.replans.push({ date: today(), reason: 'новый тест ' + old + '→' + m0, level: g.startR }); planCache.clear();
+    if (!planOf(g).ok) { save(); closeModal(); render(); actions.goalAlt({ g: g.id }); return; }
+    ensureToday(); save(); closeModal(); toast('План пересчитан'); render();
+  }
+});
+document.addEventListener('input', e => {
+  const f = e.target.closest('form[data-form="profile"]');
+  if (f) { const w = parseNum(f.elements.weight.value), h = parseNum(f.elements.height.value); $('#bmiOut', f).textContent = bmiText(w > 0 && h > 0 ? bmiOf(w, h) : null); }
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'gx') $('#customBox').hidden = e.target.value !== 'custom';
+  else if (e.target.id === 'remOn') { db.settings.remindOn = e.target.checked; if (e.target.checked) askNotify(); save(); }
+  else if (e.target.id === 'remTime') { db.settings.remindTime = e.target.value || '20:00'; save(); }
+  else if (e.target.id === 'sndOn') { db.settings.sound = e.target.checked; save(); }
+  else if (e.target.id === 'importFile') {
+    const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+    const r = new FileReader();
+    r.onload = async () => {
+      try {
+        const o = JSON.parse(r.result);
+        if (!o || typeof o !== 'object' || !Array.isArray(o.goals) || !Array.isArray(o.measures)) throw 0;
+        if (await confirmBox('Заменить текущие данные данными из файла?\nЦелей: ' + o.goals.length + ', замеров: ' + o.measures.length + '.', [{ t: 'Заменить', cls: 'danger' }]) !== 0) return;
+        db = normalize(o); planCache.clear(); refresh(); toast('Данные импортированы'); render();
+      } catch (_) { toast('Не удалось прочитать файл: неверный формат'); }
+    };
+    r.readAsText(file);
+  }
+});
+function showDisclaimer() {
+  openModal('<h2 style="margin-top:0">Перед началом</h2><p class="mtext">Приложение не заменяет консультацию врача. При болях, головокружении, одышке или хронических заболеваниях сначала проконсультируйтесь с врачом.\n\nВсе данные хранятся только на вашем устройстве (в браузере). Делайте резервную копию в разделе «Ещё».</p><button class="btn primary" data-act="ack">Понятно</button>');
+}
+actions.ack = () => { db.settings.ack = true; save(); closeModal(); if (!db.profile) { state.tab = 'more'; render(); toast('Заполните профиль, чтобы построить план'); } };
+
+
+/* ==========================================================
+   5. ГРАФИКИ (чистый SVG)
+   ========================================================== */
+function lineChart(series, opt = {}) {
+  const pts = series.flatMap(s => s.pts);
+  if (!pts.length) return '<p class="muted small">Недостаточно данных за выбранный период.</p>';
+  const W = 340, H = 180, pl = 38, pr = 10, pt = 10, pb = 24;
+  let x0 = Math.min(...pts.map(p => p.x)), x1 = Math.max(...pts.map(p => p.x)); if (x0 === x1) { x0 -= 864e5; x1 += 864e5; }
+  let y0 = Math.min(...pts.map(p => p.y)), y1 = Math.max(...pts.map(p => p.y)); const padY = (y1 - y0) * 0.15 || 1; y0 -= padY; y1 += padY; if (opt.zero) y0 = Math.max(0, Math.min(y0, 0));
+  const sx = x => pl + (x - x0) / (x1 - x0) * (W - pl - pr), sy = y => H - pb - (y - y0) / (y1 - y0) * (H - pt - pb);
+  let g = '';
+  for (let i = 0; i <= 3; i++) { const v = y0 + (y1 - y0) * i / 3, y = sy(v); g += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + y + '" y2="' + y + '" stroke="var(--line)"/><text x="' + (pl - 4) + '" y="' + (y + 3) + '" text-anchor="end">' + fmtNum(Math.round(v * 10) / 10) + '</text>'; }
+  for (let i = 0; i <= 2; i++) { const x = x0 + (x1 - x0) * i / 2; g += '<text x="' + sx(x) + '" y="' + (H - 6) + '" text-anchor="' + (i === 0 ? 'start' : i === 2 ? 'end' : 'middle') + '">' + fmtDate(fromUTC(Math.round(x / 864e5) * 864e5)) + '</text>'; }
+  series.forEach(s => {
+    if (!s.pts.length) return;
+    g += '<polyline fill="none" stroke="' + s.color + '" stroke-width="2.2" stroke-linejoin="round" ' + (s.dash ? 'stroke-dasharray="' + s.dash + '"' : '') + ' points="' + s.pts.map(p => sx(p.x).toFixed(1) + ',' + sy(p.y).toFixed(1)).join(' ') + '"/>';
+    if (!s.nodots && s.pts.length <= 31) g += s.pts.map(p => '<circle cx="' + sx(p.x).toFixed(1) + '" cy="' + sy(p.y).toFixed(1) + '" r="3" fill="' + s.color + '"/>').join('');
+  });
+  const last = series[0].pts[series[0].pts.length - 1];
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img">' + g + '</svg><div class="legend">' + series.map(s => '<span><i style="background:' + s.color + '"></i>' + esc(s.name) + '</span>').join('') + (last ? '<span>последнее: <b style="color:var(--text)">' + fmtNum(Math.round(last.y * 10) / 10) + '</b></span>' : '') + '</div>';
+}
+function barChart(map) {
+  const keys = Object.keys(map).sort().slice(-20);
+  if (!keys.length) return '<p class="muted small">Недостаточно данных за выбранный период.</p>';
+  const W = 340, H = 160, pl = 8, pb = 22, pt = 16, max = Math.max(...keys.map(k => map[k])), bw = (W - pl * 2) / keys.length;
+  let g = '';
+  keys.forEach((k, i) => {
+    const hgt = (H - pb - pt) * map[k] / max, x = pl + i * bw + bw * 0.15;
+    g += '<rect x="' + x.toFixed(1) + '" y="' + (H - pb - hgt).toFixed(1) + '" width="' + (bw * 0.7).toFixed(1) + '" height="' + hgt.toFixed(1) + '" rx="3" fill="var(--accent)"/>';
+    if (keys.length <= 12) g += '<text x="' + (x + bw * 0.35).toFixed(1) + '" y="' + (H - pb - hgt - 3).toFixed(1) + '" text-anchor="middle">' + fmtNum(map[k]) + '</text>';
+    if (keys.length <= 8 || i % 3 === 0) g += '<text x="' + (x + bw * 0.35).toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle">' + fmtDate(k) + '</text>';
+  });
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img">' + g + '</svg>';
+}
+function hbars(map) {
+  const ks = Object.keys(map).sort((a, b) => map[b] - map[a]); if (!ks.length) return '<p class="muted small">Нет данных.</p>';
+  const max = map[ks[0]];
+  return ks.map(k => '<div class="hb"><span>' + esc(k) + '</span><div class="bar"><i style="width:' + Math.round(map[k] / max * 100) + '%"></i></div><b>' + map[k] + '</b></div>').join('');
+}
+
+
+/* ==========================================================
+   6. ТАЙМЕР ОТДЫХА, УВЕДОМЛЕНИЯ, PWA
+   ========================================================== */
+let timer = null, tInt = null, actx = null;
+function unlockAudio() { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (_) {} }
+function beep() {
+  if (!db.settings.sound) return;
+  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (_) {}
+  try { unlockAudio(); [0, 0.3].forEach(dl => { const o = actx.createOscillator(), g = actx.createGain(); o.connect(g); g.connect(actx.destination); o.frequency.value = 880; g.gain.setValueAtTime(0.25, actx.currentTime + dl); g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dl + 0.25); o.start(actx.currentTime + dl); o.stop(actx.currentTime + dl + 0.26); }); } catch (_) {}
+}
+function startTimer(sec) { stopTimer(); timer = { end: Date.now() + sec * 1000, total: sec }; tInt = setInterval(tick, 250); renderTimer(); }
+function stopTimer() { clearInterval(tInt); tInt = null; timer = null; renderTimer(); }
+function tick() { if (!timer) return; if (Date.now() >= timer.end) { stopTimer(); beep(); toast('⏱ Отдых закончился — следующий подход!'); return; } renderTimer(); }
+function renderTimer() {
+  const el = $('#timer'); if (!timer) { el.hidden = true; return; }
+  const s = Math.max(0, Math.ceil((timer.end - Date.now()) / 1000));
+  el.hidden = false; el.innerHTML = '<span>Отдых</span><b>' + pad(Math.floor(s / 60)) + ':' + pad(s % 60) + '</b><span class="grow"></span><button data-act="timerAdd">+15 с</button><button data-act="timerStop">Пропустить</button>';
+}
+async function askNotify() {
+  if (!('Notification' in window)) { toast('Уведомления не поддерживаются — будет напоминание в приложении'); return; }
+  if (Notification.permission === 'default') { try { await Notification.requestPermission(); } catch (_) {} }
+  if (Notification.permission !== 'granted') toast('Уведомления не разрешены — будет напоминание при открытии');
+}
+function checkReminder() {
+  const s = db.settings, t = today();
+  if (!s.remindOn || s.lastNotified === t || nowMinutes() < toMin(s.remindTime) || !pendingToday()) return;
+  s.lastNotified = t; save();
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const opts = { body: 'Сегодня есть невыполненные подходы. Время потренироваться 💪', icon: $('#touchIcon').href || undefined, tag: 'daily' };
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) navigator.serviceWorker.ready.then(r => r.showNotification('Фитнес-трекер', opts)).catch(() => { try { new Notification('Фитнес-трекер', opts); } catch (_) {} });
+    else { try { new Notification('Фитнес-трекер', opts); } catch (_) {} }
+  }
+  if (state.tab === 'today') render();
+}
+// Иконка и манифест создаются на лету, чтобы файл оставался самодостаточным
+function makeIcon(size) {
+  const c = document.createElement('canvas'); c.width = c.height = size; const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, size, size); g.addColorStop(0, '#4aa3ff'); g.addColorStop(1, '#0a5fd8');
+  x.fillStyle = g; x.fillRect(0, 0, size, size);
+  x.strokeStyle = '#fff'; x.lineWidth = size * 0.09; x.lineCap = 'round'; x.lineJoin = 'round';
+  x.beginPath(); x.arc(size / 2, size / 2, size * 0.3, 0, Math.PI * 2); x.stroke();
+  x.beginPath(); x.moveTo(size * 0.38, size * 0.52); x.lineTo(size * 0.47, size * 0.61); x.lineTo(size * 0.64, size * 0.41); x.stroke();
+  return c.toDataURL('image/png');
+}
+function setupPWA() {
+  try {
+    $('#touchIcon').href = makeIcon(180);
+    const man = { name: 'Фитнес-трекер', short_name: 'Фитнес', lang: 'ru', display: 'standalone', orientation: 'portrait', start_url: location.href.split('#')[0], scope: location.href.split('#')[0].replace(/[^/]*$/, ''), background_color: '#0b0f17', theme_color: '#0a84ff', icons: [{ src: makeIcon(192), sizes: '192x192', type: 'image/png' }, { src: makeIcon(512), sizes: '512x512', type: 'image/png' }] };
+    const l = document.createElement('link'); l.rel = 'manifest'; l.href = URL.createObjectURL(new Blob([JSON.stringify(man)], { type: 'application/manifest+json' })); document.head.appendChild(l);
+  } catch (_) {}
+  // Офлайн-режим: нужен файл sw.js рядом с index.html (при открытии по http/https)
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+
+/* ==========================================================
+   7. ЗАПУСК
+   ========================================================== */
+let lastDay = today();
+function init() {
+  setupPWA(); refresh(); render();
+  if (!db.settings.ack) showDisclaimer();
+  setInterval(() => { if (today() !== lastDay) { lastDay = today(); refresh(); render(); } checkReminder(); }, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { if (today() !== lastDay) lastDay = today(); refresh(); if ($('#modal').hidden) render(); checkReminder(); } });
+  setTimeout(checkReminder, 1500);
+}
+init();
+</script>
+</body>
+</html>
